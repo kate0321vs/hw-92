@@ -4,3 +4,13 @@ export interface IUser {
     token: string;
     displayName: string;
 }
+
+export interface LoginAndLogoutPayload {
+    token: string;
+    username: string;
+}
+
+export interface SendMessagePayload {
+    username: string;
+    text: string;
+}
