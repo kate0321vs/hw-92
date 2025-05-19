@@ -8,6 +8,7 @@ export interface IUser {
     _id: string;
     username: string;
     password: string;
+    displayName: string;
     token: string;
 }
 
@@ -36,3 +37,20 @@ export interface ValidationError {
 export interface GlobalError {
     error: string;
 }
+
+export interface ChatMessage {
+    username: string;
+    text: string;
+}
+
+export interface IncomingChatMessages {
+    type: 'NEW_MESSAGE';
+    payload: ChatMessage;
+}
+
+export interface IncomingUserList {
+    type: 'USERS_LIST';
+    payload: string[];
+}
+
+export type IncomingMessage = IncomingChatMessages | IncomingUserList;

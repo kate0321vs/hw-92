@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, {useState} from 'react';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { LoginMutation } from '../../types';
 import { Avatar, Box, Button, Container, Link, TextField, Typography } from '@mui/material';
@@ -15,8 +15,6 @@ const Login = () => {
   const dispatch = useAppDispatch();
   const error = useAppSelector(selectLoginError);
   const navigate = useNavigate();
-
-
 
   const [state, setState] = useState<LoginMutation>({
     username: '',

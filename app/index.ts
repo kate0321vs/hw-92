@@ -39,18 +39,26 @@ interface IncomingMessage {
 router.ws('/chat', (ws, req) => {
     connectedClient.push(ws);
 
+    console.log(connectedClient.length)
     ws.on('message', (message) => {
         try {
             const decodedMessage = JSON.parse(message.toString()) as IncomingMessage;
-            console.log(decodedMessage);
 
             if (decodedMessage.type === "LOGIN") {
-                const token = (decodedMessage.payload as LoginAndLogoutPayload).token;
-                const username = (decodedMessage.payload as LoginAndLogoutPayload).username;
+                const { username, token } = decodedMessage.payload as LoginAndLogoutPayload;
+
                 if (token) {
-                    authorizedUsers.push(username);
-                    console.log("Client authorized");
-                    return;
+                    if (!authorizedUsers.includes(username)) {
+                        authorizedUsers.push(username);
+                        console.log("Client authorized");
+                    }
+
+                    connectedClient.forEach(clientWS => {
+                        clientWS.send(JSON.stringify({
+                            type: "USERS_LIST",
+                            payload: authorizedUsers
+                        }));
+                    });
                 } else {
                     ws.send(JSON.stringify({ error: "Token required for LOGIN" }));
                     ws.close();
@@ -59,26 +67,21 @@ router.ws('/chat', (ws, req) => {
             }
 
             if (decodedMessage.type === "LOGOUT") {
-                const token = (decodedMessage.payload as LoginAndLogoutPayload).token;
-                const username = (decodedMessage.payload as LoginAndLogoutPayload).username;
-                if (token) {
-                    const index = authorizedUsers.indexOf(username);
-                    if (index !== -1) authorizedUsers.splice(index, 1);
-                    return;
-                } else {
-                    ws.send(JSON.stringify({ error: "Token required for LOGOUT" }));
+                const { username, token } = decodedMessage.payload as LoginAndLogoutPayload;
+
+                if (!token || !username) {
+                    ws.send(JSON.stringify({ error: "Token and username required for LOGOUT" }));
                     ws.close();
                     return;
                 }
-            }
-
-            if (decodedMessage.type === "GET_USERS") {
-                connectedClient.forEach((clientWS) => {
-                    clientWS.send(JSON.stringify({
-                        type: "USERS_LIST",
-                        payload: authorizedUsers,
-                    }));
-                })
+                    const index = authorizedUsers.indexOf(username);
+                    if (index !== -1) authorizedUsers.splice(index, 1);
+                    connectedClient.forEach(client => {
+                        client.send(JSON.stringify({
+                            type: "USERS_LIST",
+                            payload: authorizedUsers
+                        }));
+                    });
             }
 
             if (decodedMessage.type === "SEND_MESSAGE") {
