@@ -54,3 +54,14 @@ export interface IncomingUserList {
 }
 
 export type IncomingMessage = IncomingChatMessages | IncomingUserList;
+
+export interface IMessage {
+    id: string;
+    displayName: string;
+    text: string;
+}
+
+export interface IMessageMutation {
+    displayName: string;
+    text: string;
+}

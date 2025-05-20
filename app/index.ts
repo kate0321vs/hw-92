@@ -6,6 +6,7 @@ import usersRouter from "./routers/users";
 import mongoose from "mongoose";
 import config from "./config";
 import {LoginAndLogoutPayload, SendMessagePayload} from "./types";
+import messagesRouter from "./routers/messages";
 
 const app = express();
 const wsInstance = expressWs(app);
@@ -19,6 +20,7 @@ const router = express.Router();
 wsInstance.applyTo(router);
 
 app.use('/users', usersRouter);
+app.use('/messages', messagesRouter);
 
 const run = async () => {
     await mongoose.connect(config.db);

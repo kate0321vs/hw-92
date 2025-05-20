@@ -1,17 +1,29 @@
 import {useEffect, useState} from "react";
 import {ChatMessage, IncomingMessage} from "../../types";
-import {useAppSelector} from "../../app/hooks.ts";
+import {useAppDispatch, useAppSelector} from "../../app/hooks.ts";
 import {selectUser} from "../Users/usersSlice.ts";
 import {useWebSocket} from "../WebSocketContext/WebSocketContext.tsx";
+import {useNavigate} from "react-router-dom";
+import {addMessage, fetchMessages} from "./messagesThunk.ts";
+import {selectMessages} from "./messagesSlice.ts";
 
 const Chat = () => {
+    const dispatch = useAppDispatch();
     const [message, setMessage] = useState<ChatMessage[]>([]);
     const [messageInput, setMessageInput] = useState('');
     const [usersList, setUsersList] = useState<string[]>([]);
     const user = useAppSelector(selectUser);
     const ws = useWebSocket();
+    const navigate = useNavigate();
+    const messages = useAppSelector(selectMessages);
 
     useEffect(() => {
+        if (!user) {
+            navigate("/login");
+        }
+
+        dispatch(fetchMessages());
+
         if (!ws || !user) return;
 
         const handleMessage =  (event: MessageEvent) => {
@@ -51,12 +63,9 @@ const Chat = () => {
 
     }, [ws, user]);
 
-    console.log(usersList)
-
-
-    const sendMessage = (e: React.FormEvent) => {
+    const sendMessage = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!ws || ws.readyState !== WebSocket.OPEN) return;
+        if (!ws || ws.readyState !== WebSocket.OPEN || !user) return;
 
         ws.send(JSON.stringify({
             type: "SEND_MESSAGE",
@@ -65,6 +74,8 @@ const Chat = () => {
                 text: messageInput,
             },
         }));
+
+        await dispatch(addMessage({displayName: user.displayName, text: messageInput}));
 
         setMessageInput('');
     };
@@ -77,6 +88,11 @@ const Chat = () => {
                 </div>
             ))}
             <div style={{textAlign: "center", marginTop: "200px"}}>
+                {messages.map((message) => (
+                    <div key={message.id}>
+                        <b>{message.displayName}: {message.text}</b>
+                    </div>
+                ))}
                 {message.map((msg, index) => (
                     <div key={index}>
                         <b>{msg.username}: {msg.text}</b>
