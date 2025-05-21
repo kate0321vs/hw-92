@@ -39,7 +39,7 @@ export interface GlobalError {
 }
 
 export interface ChatMessage {
-    username: string;
+    displayName: string;
     text: string;
 }
 
@@ -48,15 +48,20 @@ export interface IncomingChatMessages {
     payload: ChatMessage;
 }
 
+export interface UserListPayload {
+    username: string;
+    displayName: string;
+}
+
 export interface IncomingUserList {
     type: 'USERS_LIST';
-    payload: string[];
+    payload: UserListPayload[];
 }
 
 export type IncomingMessage = IncomingChatMessages | IncomingUserList;
 
 export interface IMessage {
-    id: string;
+    _id: string;
     displayName: string;
     text: string;
 }

@@ -1,17 +1,16 @@
 import {useEffect, useState} from "react";
-import {ChatMessage, IncomingMessage} from "../../types";
+import {IncomingMessage, UserListPayload} from "../../types";
 import {useAppDispatch, useAppSelector} from "../../app/hooks.ts";
 import {selectUser} from "../Users/usersSlice.ts";
 import {useWebSocket} from "../WebSocketContext/WebSocketContext.tsx";
 import {useNavigate} from "react-router-dom";
-import {addMessage, fetchMessages} from "./messagesThunk.ts";
+import {fetchMessages} from "./messagesThunk.ts";
 import {selectMessages} from "./messagesSlice.ts";
 
 const Chat = () => {
     const dispatch = useAppDispatch();
-    const [message, setMessage] = useState<ChatMessage[]>([]);
     const [messageInput, setMessageInput] = useState('');
-    const [usersList, setUsersList] = useState<string[]>([]);
+    const [usersList, setUsersList] = useState<UserListPayload[]>([]);
     const user = useAppSelector(selectUser);
     const ws = useWebSocket();
     const navigate = useNavigate();
@@ -20,17 +19,23 @@ const Chat = () => {
     useEffect(() => {
         if (!user) {
             navigate("/login");
+            return;
         }
 
         dispatch(fetchMessages());
+    }, [dispatch, user, navigate]);
+
+    useEffect(() => {
 
         if (!ws || !user) return;
 
-        const handleMessage =  (event: MessageEvent) => {
+        const handleMessage = async  (event: MessageEvent) => {
             const decodedMessage = JSON.parse(event.data) as IncomingMessage;
 
+            console.log(decodedMessage);
+
             if (decodedMessage.type === 'NEW_MESSAGE') {
-                setMessage(prev => [decodedMessage.payload, ...prev]);
+                await dispatch(fetchMessages());
             } else if (decodedMessage.type === 'USERS_LIST') {
                 setUsersList(decodedMessage.payload);
             }
@@ -46,6 +51,7 @@ const Chat = () => {
                 payload: {
                     username: user.username,
                     token: user.token,
+                    displayName: user.displayName
                 },
             }));
         };
@@ -67,38 +73,35 @@ const Chat = () => {
         e.preventDefault();
         if (!ws || ws.readyState !== WebSocket.OPEN || !user) return;
 
+        const messagePayload = {
+            displayName: user.displayName,
+            text: messageInput,
+        };
+
         ws.send(JSON.stringify({
             type: "SEND_MESSAGE",
-            payload: {
-                username: user?.displayName,
-                text: messageInput,
-            },
+            payload: messagePayload,
         }));
-
-        await dispatch(addMessage({displayName: user.displayName, text: messageInput}));
 
         setMessageInput('');
     };
 
+    console.log(usersList)
+
     return (
         <>
-            {usersList.map((user, index) => (
-                <div key={index}>
-                    <b>{user}</b>
+            {usersList.map((user) => (
+                <div key={user.username}>
+                    <b>{user.displayName}</b>
                 </div>
             ))}
             <div style={{textAlign: "center", marginTop: "200px"}}>
                 {messages.map((message) => (
-                    <div key={message.id}>
+                    <div key={message._id}>
                         <b>{message.displayName}: {message.text}</b>
                     </div>
                 ))}
-                {message.map((msg, index) => (
-                    <div key={index}>
-                        <b>{msg.username}: {msg.text}</b>
-                    </div>
-                ))}
-                <form style={{marginTop: "20px"}} onSubmit={sendMessage}>
+                <form style={{marginTop: "20px", marginBottom: "100px"}} onSubmit={sendMessage}>
                     <input type="text"
                            name='messageText'
                            value={messageInput}

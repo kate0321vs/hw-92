@@ -7,6 +7,7 @@ import mongoose from "mongoose";
 import config from "./config";
 import {LoginAndLogoutPayload, SendMessagePayload} from "./types";
 import messagesRouter from "./routers/messages";
+import Message from "./models/Message";
 
 const app = express();
 const wsInstance = expressWs(app);
@@ -29,7 +30,7 @@ const run = async () => {
 run().catch((err) => console.error(err));
 
 const connectedClient: WebSocket[] = [];
-const authorizedUsers: string[] = [];
+const authorizedUsers: {}[] = [];
 
 type Payload = {} | LoginAndLogoutPayload | SendMessagePayload;
 
@@ -41,17 +42,17 @@ interface IncomingMessage {
 router.ws('/chat', (ws, req) => {
     connectedClient.push(ws);
 
-    console.log(connectedClient.length)
-    ws.on('message', (message) => {
+    ws.on('message', async (message) => {
         try {
             const decodedMessage = JSON.parse(message.toString()) as IncomingMessage;
 
             if (decodedMessage.type === "LOGIN") {
-                const { username, token } = decodedMessage.payload as LoginAndLogoutPayload;
+                const {username, token, displayName} = decodedMessage.payload as LoginAndLogoutPayload;
 
                 if (token) {
-                    if (!authorizedUsers.includes(username)) {
-                        authorizedUsers.push(username);
+                    const existingUser = authorizedUsers.find(user => (user as LoginAndLogoutPayload).username === username);
+                    if (!existingUser) {
+                        authorizedUsers.push({username, displayName});
                         console.log("Client authorized");
                     }
 
@@ -69,15 +70,18 @@ router.ws('/chat', (ws, req) => {
             }
 
             if (decodedMessage.type === "LOGOUT") {
-                const { username, token } = decodedMessage.payload as LoginAndLogoutPayload;
+                const { username, token, displayName} = decodedMessage.payload as LoginAndLogoutPayload;
 
                 if (!token || !username) {
                     ws.send(JSON.stringify({ error: "Token and username required for LOGOUT" }));
                     ws.close();
                     return;
                 }
-                    const index = authorizedUsers.indexOf(username);
-                    if (index !== -1) authorizedUsers.splice(index, 1);
+
+                const existingUser = authorizedUsers.find(user => (user as LoginAndLogoutPayload).username === username);
+                if (!existingUser) {
+                    authorizedUsers.push({ username, displayName });
+                }
                     connectedClient.forEach(client => {
                         client.send(JSON.stringify({
                             type: "USERS_LIST",
@@ -87,13 +91,22 @@ router.ws('/chat', (ws, req) => {
             }
 
             if (decodedMessage.type === "SEND_MESSAGE") {
+                const { displayName, text } = decodedMessage.payload as SendMessagePayload;
+
+                const message = new Message({
+                    displayName,
+                    text,
+                });
+                await message.save();
+
                 connectedClient.forEach((clientWS) => {
+
                     clientWS.send(JSON.stringify({
                         type: "NEW_MESSAGE",
-                        payload: {username: (decodedMessage.payload as SendMessagePayload).username,
+                        payload: {displayName: (decodedMessage.payload as SendMessagePayload).displayName,
                             text: (decodedMessage.payload as SendMessagePayload).text},
                     }));
-                })
+                });
             }
         } catch (e) {
             ws.send(JSON.stringify({error: "Invalid message format"}));

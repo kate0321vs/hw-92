@@ -8,9 +8,11 @@ export interface IUser {
 export interface LoginAndLogoutPayload {
     token: string;
     username: string;
+    displayName: string;
+    id: string;
 }
 
 export interface SendMessagePayload {
-    username: string;
+    displayName: string;
     text: string;
 }
