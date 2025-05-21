@@ -53,7 +53,6 @@ router.ws('/chat', (ws, req) => {
                     const existingUser = authorizedUsers.find(user => (user as LoginAndLogoutPayload).username === username);
                     if (!existingUser) {
                         authorizedUsers.push({username, displayName});
-                        console.log("Client authorized");
                     }
 
                     connectedClient.forEach(clientWS => {
@@ -70,7 +69,7 @@ router.ws('/chat', (ws, req) => {
             }
 
             if (decodedMessage.type === "LOGOUT") {
-                const { username, token, displayName} = decodedMessage.payload as LoginAndLogoutPayload;
+                const { username, token} = decodedMessage.payload as LoginAndLogoutPayload;
 
                 if (!token || !username) {
                     ws.send(JSON.stringify({ error: "Token and username required for LOGOUT" }));
@@ -78,10 +77,14 @@ router.ws('/chat', (ws, req) => {
                     return;
                 }
 
-                const existingUser = authorizedUsers.find(user => (user as LoginAndLogoutPayload).username === username);
-                if (!existingUser) {
-                    authorizedUsers.push({ username, displayName });
+                const userIndex = authorizedUsers.findIndex(
+                    (user) => (user as LoginAndLogoutPayload).username === username
+                );
+
+                if (userIndex !== -1) {
+                    authorizedUsers.splice(userIndex, 1);
                 }
+
                     connectedClient.forEach(client => {
                         client.send(JSON.stringify({
                             type: "USERS_LIST",

@@ -6,6 +6,7 @@ import {useWebSocket} from "../WebSocketContext/WebSocketContext.tsx";
 import {useNavigate} from "react-router-dom";
 import {fetchMessages} from "./messagesThunk.ts";
 import {selectMessages} from "./messagesSlice.ts";
+import {Box, Button, Divider, List, ListItem, Paper, TextField, Typography} from "@mui/material";
 
 const Chat = () => {
     const dispatch = useAppDispatch();
@@ -21,7 +22,7 @@ const Chat = () => {
             navigate("/login");
             return;
         }
-
+        setUsersList(usersList);
         dispatch(fetchMessages());
     }, [dispatch, user, navigate]);
 
@@ -31,8 +32,6 @@ const Chat = () => {
 
         const handleMessage = async  (event: MessageEvent) => {
             const decodedMessage = JSON.parse(event.data) as IncomingMessage;
-
-            console.log(decodedMessage);
 
             if (decodedMessage.type === 'NEW_MESSAGE') {
                 await dispatch(fetchMessages());
@@ -44,7 +43,6 @@ const Chat = () => {
         ws.addEventListener("message", handleMessage);
 
         const handleOpen = () => {
-            console.log("WebSocket opened");
 
             ws.send(JSON.stringify({
                 type: "LOGIN",
@@ -86,29 +84,53 @@ const Chat = () => {
         setMessageInput('');
     };
 
-    console.log(usersList)
-
     return (
         <>
-            {usersList.map((user) => (
-                <div key={user.username}>
-                    <b>{user.displayName}</b>
-                </div>
-            ))}
-            <div style={{textAlign: "center", marginTop: "200px"}}>
-                {messages.map((message) => (
-                    <div key={message._id}>
-                        <b>{message.displayName}: {message.text}</b>
-                    </div>
-                ))}
-                <form style={{marginTop: "20px", marginBottom: "100px"}} onSubmit={sendMessage}>
-                    <input type="text"
-                           name='messageText'
-                           value={messageInput}
-                           onChange={e => setMessageInput(e.target.value)}/>
-                    <button style={{marginLeft: "10px"}} type='submit'>Send</button>
-                </form>
-            </div>
+            <Box sx={{ display: 'flex', gap: 4, p: 4 }}>
+                <Box sx={{ width: '200px' }}>
+                    <Typography variant="h6" gutterBottom>
+                        Online users
+                    </Typography>
+                    <List>
+                        {usersList.map((user) => (
+                            <ListItem key={user.username}>
+                                <Typography variant="body1"><b>{user.displayName}</b></Typography>
+                            </ListItem>
+                        ))}
+                    </List>
+                </Box>
+
+                <Box sx={{ flex: 1 }}>
+                    <Paper sx={{ p: 2, minHeight: '400px', maxHeight: '70vh', overflowY: 'auto' }}>
+                        {messages.map((message) => (
+                            <Box key={message._id} sx={{ mb: 1 }}>
+                                <Typography variant="body2">
+                                    <b>{message.displayName}:</b> {message.text}
+                                </Typography>
+                                <Divider sx={{ mt: 1 }} />
+                            </Box>
+                        ))}
+                    </Paper>
+
+                    <Box
+                        component="form"
+                        onSubmit={sendMessage}
+                        sx={{ mt: 2, display: 'flex', gap: 2 }}
+                    >
+                        <TextField
+                            fullWidth
+                            variant="outlined"
+                            label="Введите сообщение"
+                            name="messageText"
+                            value={messageInput}
+                            onChange={(e) => setMessageInput(e.target.value)}
+                        />
+                        <Button sx={{backgroundColor: "royalblue"}} variant="contained" type="submit">
+                            Send
+                        </Button>
+                    </Box>
+                </Box>
+            </Box>
         </>
 
 
